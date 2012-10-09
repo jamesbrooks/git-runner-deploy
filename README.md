@@ -1,24 +1,16 @@
-# Git::Runner::Deploy
+# Git Runner - Deploy
 
-TODO: Write a gem description
+Capistrano deploy functionality for [Git Runner](https://github.com/JamesBrooks/git-runner)
+
+Added deployment functionality (using capistrano) to be integrated into Git Runner
 
 ## Installation
-
-Add this line to your application's Gemfile:
-
-    gem 'git-runner-deploy'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
 
     $ gem install git-runner-deploy
 
 ## Usage
 
-TODO: Write usage instructions here
+TODO: Write usage instructions
 
 ## Contributing
 

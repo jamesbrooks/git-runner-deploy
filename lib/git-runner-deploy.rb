@@ -2,6 +2,8 @@ require 'digest'
 
 module GitRunner
   class Instruction
+    class Base
+    end
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
