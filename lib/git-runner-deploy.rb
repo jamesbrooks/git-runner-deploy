@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.0.2'
+      VERSION = '0.1.0'
 
       attr_accessor :clone_directory
 
@@ -22,12 +22,7 @@ module GitRunner
         Text.out(Text.green("Performing Deploy (#{environment_from_branch(branch)})"), :heading)
 
         checkout_branch
-
-        if missing_capfile?
-          Text.out(Text.red("Missing Capfile, unable to complete deploy."))
-          fail!
-        end
-
+        ensure_presence_of_capfile
         prepare_deploy_environment
         perform_deploy
         cleanup_deploy_environment
@@ -37,12 +32,17 @@ module GitRunner
         Text.out(Text.green("\u2714 Deploy successful, completed in #{(end_time - start_time).ceil} seconds"))
       end
 
+
+    private
       def branches
         args.split(/\s+/)
       end
 
-      def missing_capfile?
-        !File.exists?("#{clone_directory}/Capfile")
+      def ensure_presence_of_capfile
+        unless File.exists?("#{clone_directory}/Capfile")
+          Text.out(Text.red("Missing Capfile, unable to complete deploy."))
+          fail!
+        end
       end
 
       def uses_bundler?
@@ -86,10 +86,25 @@ module GitRunner
           "cap deploy"
         end
 
-        execute(
-          "cd #{clone_directory}",
-          cap_deploy_command
-        )
+        Text.indent do
+          execute(
+            "cd #{clone_directory}",
+            cap_deploy_command,
+            :errproc => method(:cap_deploy_outproc)
+          )
+        end
+      end
+
+      def cap_deploy_outproc(out)
+        if out =~ /executing `(.*)'/
+          case $1
+          when 'bundle:install'
+            Text.out('* Installing gems')
+
+          when 'deploy:restart'
+            Text.out('* Restarting application')
+          end
+        end
       end
 
       def cleanup_deploy_environment
@@ -100,8 +115,6 @@ module GitRunner
         )
       end
 
-
-    private
       def environment_from_branch(branch)
         if branch.name == 'master'
           'production'
