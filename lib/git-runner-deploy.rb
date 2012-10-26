@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.1.2'
+      VERSION = '0.1.3'
 
       attr_accessor :clone_directory
 
@@ -61,25 +61,29 @@ module GitRunner
       end
 
       def checkout_branch
-        timestamp            = Time.now.strftime("%Y%m%d%H%M%S")
         self.clone_directory = File.join(Configuration.tmp_directory, "#{branch.repository_name}")
+        revision             = execute("git ls-remote file://#{branch.repository_path} #{branch.name}").split("\t")[0]
 
         if File.exist?(clone_directory)
           Text.out("Checking out #{branch.name} to #{clone_directory}")
+
+          execute(
+            "cd #{clone_directory}",
+            "git fetch origin",
+            "git fetch --tags origin",
+            "git reset --hard #{revision}",
+            "git clean -d -x -f"
+          )
         else
           Text.out("Checking out #{branch.name} to #{clone_directory} (fresh clone)")
 
           execute(
             "mkdir -p #{clone_directory}",
-            "git clone file://#{branch.repository_path} #{clone_directory}"
+            "git clone file://#{branch.repository_path} #{clone_directory}",
+            "cd #{clone_directory}",
+            "git checkout -b git-runner-deploy #{revision}"
           )
         end
-
-        execute(
-          "cd #{clone_directory}",
-          "git checkout #{branch.name}",
-          "git pull"
-        )
       end
 
       def prepare_deploy_environment
@@ -118,6 +122,9 @@ module GitRunner
           case $1
           when 'bundle:install'
             Text.out('* Installing gems')
+
+          when 'assets:precompile'
+            Text.out('* Precompilng assets')
 
           when 'deploy:restart'
             Text.out('* Restarting application')
