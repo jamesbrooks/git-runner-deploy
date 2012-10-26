@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.1.0'
+      VERSION = '0.1.1'
 
       attr_accessor :clone_directory
 
@@ -17,6 +17,8 @@ module GitRunner
       end
 
       def perform
+        GitRunner::Hooks.fire(:deploy_begin, self)
+
         start_time = Time.now
 
         Text.out(Text.green("Performing Deploy (#{environment_from_branch(branch)})"), :heading)
@@ -30,6 +32,11 @@ module GitRunner
         end_time = Time.now
 
         Text.out(Text.green("\u2714 Deploy successful, completed in #{(end_time - start_time).ceil} seconds"))
+
+
+      rescue Exception => ex
+        GitRunner::Hooks.fire(:deploy_failure, self)
+        raise ex
       end
 
 
@@ -93,6 +100,8 @@ module GitRunner
             :errproc => method(:cap_deploy_outproc)
           )
         end
+
+        GitRunner::Hooks.fire(:deploy_success, self)
       end
 
       def cap_deploy_outproc(out)

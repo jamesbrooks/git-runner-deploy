@@ -1,5 +1,8 @@
 # Git Runner - Deploy
 
+[![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/JamesBrooks/git-runner-deploy)
+
+
 Capistrano deploy functionality for [Git Runner](https://github.com/JamesBrooks/git-runner)
 
 Added deployment functionality (using capistrano) to be integrated into Git Runner
