@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.1.1'
+      VERSION = '0.1.2'
 
       attr_accessor :clone_directory
 
@@ -27,7 +27,6 @@ module GitRunner
         ensure_presence_of_capfile
         prepare_deploy_environment
         perform_deploy
-        cleanup_deploy_environment
 
         end_time = Time.now
 
@@ -63,13 +62,23 @@ module GitRunner
 
       def checkout_branch
         timestamp            = Time.now.strftime("%Y%m%d%H%M%S")
-        self.clone_directory = File.join(Configuration.tmp_directory, "#{branch.repository_name}-#{environment_from_branch(branch)}-#{timestamp}")
+        self.clone_directory = File.join(Configuration.tmp_directory, "#{branch.repository_name}")
 
-        Text.out("Checking out #{branch.name} to #{clone_directory}")
+        if File.exist?(clone_directory)
+          Text.out("Checking out #{branch.name} to #{clone_directory}")
+        else
+          Text.out("Checking out #{branch.name} to #{clone_directory} (fresh clone)")
+
+          execute(
+            "mkdir -p #{clone_directory}",
+            "git clone file://#{branch.repository_path} #{clone_directory}"
+          )
+        end
 
         execute(
-          "mkdir -p #{clone_directory}",
-          "git clone --depth=1 --branch=#{branch.name} file://#{branch.repository_path} #{clone_directory}"
+          "cd #{clone_directory}",
+          "git checkout #{branch.name}",
+          "git pull"
         )
       end
 
@@ -79,7 +88,7 @@ module GitRunner
         if uses_bundler?
           execute(
             "cd #{clone_directory}",
-            "bundle install --path=#{File.join(Configuration.tmp_directory, '.gems')}"
+            "bundle install --path=.git-runner/gems"
           )
         end
       end
@@ -114,14 +123,6 @@ module GitRunner
             Text.out('* Restarting application')
           end
         end
-      end
-
-      def cleanup_deploy_environment
-        Text.out("Cleaning deploy environment")
-        execute(
-          "rm -rf #{clone_directory}",
-          "cd #{branch.repository_path}"
-        )
       end
 
       def environment_from_branch(branch)
