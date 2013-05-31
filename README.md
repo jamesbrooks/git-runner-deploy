@@ -12,8 +12,23 @@ Added deployment functionality (using capistrano) to be integrated into Git Runn
     $ gem install git-runner-deploy
 
 ## Usage
+At the top of your deploy file (e.g. config/deploy.rb):
 
-TODO: Write usage instructions
+##### To deploy all branches
+````
+# GitRunner: Deploy
+````
+
+##### To only deploy specific branches
+````
+# GitRunner: Deploy master staging
+````
+
+## Multistage
+Capistrano multistage configurations are automatically detected. In the case of multistage the branch name is used to determine which stage should be deployed. In the case of the master branch the stage name `production` is used. For every other branch that branches name is used as the deploy stage, e.g:
+
+* `master` -> `cap production deploy`
+* `staging` -> `cap staging deploy`
 
 ## Contributing
 
