@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.1.3'
+      VERSION = '0.1.4'
 
       attr_accessor :clone_directory
 
@@ -72,7 +72,7 @@ module GitRunner
             "git fetch origin",
             "git fetch --tags origin",
             "git reset --hard #{revision}",
-            "git clean -d -x -f"
+            "git clean -x -f"
           )
         else
           Text.out("Checking out #{branch.name} to #{clone_directory} (fresh clone)")
