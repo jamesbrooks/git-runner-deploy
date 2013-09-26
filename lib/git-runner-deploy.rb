@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.1.4'
+      VERSION = '0.1.5'
 
       attr_accessor :clone_directory
 
@@ -106,6 +106,9 @@ module GitRunner
           "cap deploy"
         end
 
+        # 'bundle exec' if bundler is being used
+        cap_deploy_command = "bundle exec #{cap_deploy_command}" if uses_bundler?
+
         Text.indent do
           execute(
             "cd #{clone_directory}",
@@ -120,10 +123,13 @@ module GitRunner
       def cap_deploy_outproc(out)
         if out =~ /executing `(.*)'/
           case $1
+          when 'deploy:update_code'
+            Text.out('* Copying application code')
+
           when 'bundle:install'
             Text.out('* Installing gems')
 
-          when 'assets:precompile'
+          when 'assets:precompile', 'deploy:assets:precompile'
             Text.out('* Precompilng assets')
 
           when 'deploy:restart'
