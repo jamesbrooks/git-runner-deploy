@@ -24,7 +24,6 @@ module GitRunner
         Text.out(Text.green("Performing Deploy (#{environment_from_branch(branch)})"), :heading)
 
         checkout_branch
-        ensure_presence_of_capfile
         prepare_deploy_environment
         perform_deploy
 
@@ -40,15 +39,30 @@ module GitRunner
 
 
     private
-      def branches
-        args.split(/\s+/)
+      def default_deploy_command(branch_name)
+        if multistage?
+          "cap #{branch_name == 'master' ? 'production' : branch} deploy"
+        else
+          "cap deploy"
+        end
       end
 
-      def ensure_presence_of_capfile
-        unless File.exists?("#{clone_directory}/Capfile")
-          Text.out(Text.red("Missing Capfile, unable to complete deploy."))
-          fail!
+      def branches_with_commands
+        b_args = args.dup
+
+        if !b_args.empty? && b_args.scan(/\((.*?)(?:="(.*?)"?)?\)/).empty?
+          # Support old format for branch declarations
+          b_args = b_args.split(/\s+/).map { |a| "(#{a})" }.join
         end
+
+        b_args.scan(/\((.*?)(?:="(.*?)"?)?\)/).inject({}) do |hash, (branch, command)|
+          hash[branch] = command || default_deploy_command(branch)
+          hash
+        end
+      end
+
+      def branches
+        branches_with_commands.keys
       end
 
       def uses_bundler?
@@ -98,29 +112,25 @@ module GitRunner
       end
 
       def perform_deploy
-        cap_deploy_command = if multistage?
-          Text.out("Deploying application (multistage detected)")
-          "cap #{environment_from_branch(branch)} deploy"
-        else
-          Text.out("Deploying application")
-          "cap deploy"
-        end
+        deploy_command = branches_with_commands[branch.name] || default_deploy_command(branch.name)
 
         # 'bundle exec' if bundler is being used
-        cap_deploy_command = "bundle exec #{cap_deploy_command}" if uses_bundler?
+        deploy_command = "bundle exec #{deploy_command}" if uses_bundler?
+
+        Text.out("Deploying application (#{deploy_command})")
 
         Text.indent do
           execute(
             "cd #{clone_directory}",
-            cap_deploy_command,
-            :errproc => method(:cap_deploy_outproc)
+            deploy_command,
+            :errproc => method(:deploy_outproc)
           )
         end
 
         GitRunner::Hooks.fire(:deploy_success, self)
       end
 
-      def cap_deploy_outproc(out)
+      def deploy_outproc(out)
         if out =~ /executing `(.*)'/
           case $1
           when 'deploy:update_code'
