@@ -7,7 +7,7 @@ module GitRunner
 
     # Performs deployments using capistrano (cap deploy)
     class Deploy < Base
-      VERSION = '0.1.5'
+      VERSION = '0.2.0'
 
       attr_accessor :clone_directory
 
